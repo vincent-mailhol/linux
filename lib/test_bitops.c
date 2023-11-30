@@ -50,6 +50,31 @@ static unsigned long order_comb_long[][2] = {
 };
 #endif
 
+/* Assert that a boolean expression can be folded in a constant and is true. */
+static __always_inline void test_const_eval(bool expr)
+{
+	BUILD_BUG_ON(!__builtin_constant_p(expr));
+	BUILD_BUG_ON(!expr);
+}
+
+/*
+ * On any supported optimization level (-O2, -Os) and if invoked with
+ * a compile-time constant argument, the compiler must be able to fold
+ * into a constant expression all the bit find functions. Namely:
+ * __ffs(), ffs(), ffz(), __fls(), fls() and fls64(). Otherwise,
+ * trigger a build bug.
+ */
+static __always_inline void test_bitops_const_eval(unsigned int n)
+{
+	test_const_eval(__ffs(BIT(n)) == n);
+	test_const_eval(ffs(BIT(n)) == n + 1);
+	test_const_eval(ffz(~BIT(n)) == n);
+	test_const_eval(__fls(BIT(n)) == n);
+	test_const_eval(fls(BIT(n)) == n + 1);
+	test_const_eval(fls64(BIT_ULL(n)) == n + 1);
+	test_const_eval(fls64(BIT_ULL(n + 32)) == n + 33);
+}
+
 static int __init test_bitops_startup(void)
 {
 	int i, bit_set;
@@ -93,6 +118,10 @@ static int __init test_bitops_startup(void)
 	bit_set = find_first_bit(g_bitmap, BITOPS_LAST);
 	if (bit_set != BITOPS_LAST)
 		pr_err("ERROR: FOUND SET BIT %d\n", bit_set);
+
+	test_bitops_const_eval(0);
+	test_bitops_const_eval(10);
+	test_bitops_const_eval(31);
 
 	pr_info("Completed bitops test\n");
 
