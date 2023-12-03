@@ -28,7 +28,7 @@
  *	So we use the best form possible on a given platform.
  */
 
-static inline void bset_reg_set_bit(int nr, volatile unsigned long *vaddr)
+static __always_inline void bset_reg_set_bit(int nr, volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
 
@@ -38,7 +38,7 @@ static inline void bset_reg_set_bit(int nr, volatile unsigned long *vaddr)
 		: "memory");
 }
 
-static inline void bset_mem_set_bit(int nr, volatile unsigned long *vaddr)
+static __always_inline void bset_mem_set_bit(int nr, volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
 
@@ -47,7 +47,7 @@ static inline void bset_mem_set_bit(int nr, volatile unsigned long *vaddr)
 		: "di" (nr & 7));
 }
 
-static inline void bfset_mem_set_bit(int nr, volatile unsigned long *vaddr)
+static __always_inline void bfset_mem_set_bit(int nr, volatile unsigned long *vaddr)
 {
 	__asm__ __volatile__ ("bfset %1{%0:#1}"
 		:
@@ -71,7 +71,7 @@ arch___set_bit(unsigned long nr, volatile unsigned long *addr)
 	set_bit(nr, addr);
 }
 
-static inline void bclr_reg_clear_bit(int nr, volatile unsigned long *vaddr)
+static __always_inline void bclr_reg_clear_bit(int nr, volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
 
@@ -81,7 +81,7 @@ static inline void bclr_reg_clear_bit(int nr, volatile unsigned long *vaddr)
 		: "memory");
 }
 
-static inline void bclr_mem_clear_bit(int nr, volatile unsigned long *vaddr)
+static __always_inline void bclr_mem_clear_bit(int nr, volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
 
@@ -90,7 +90,7 @@ static inline void bclr_mem_clear_bit(int nr, volatile unsigned long *vaddr)
 		: "di" (nr & 7));
 }
 
-static inline void bfclr_mem_clear_bit(int nr, volatile unsigned long *vaddr)
+static __always_inline void bfclr_mem_clear_bit(int nr, volatile unsigned long *vaddr)
 {
 	__asm__ __volatile__ ("bfclr %1{%0:#1}"
 		:
@@ -114,7 +114,7 @@ arch___clear_bit(unsigned long nr, volatile unsigned long *addr)
 	clear_bit(nr, addr);
 }
 
-static inline void bchg_reg_change_bit(int nr, volatile unsigned long *vaddr)
+static __always_inline void bchg_reg_change_bit(int nr, volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
 
@@ -124,7 +124,7 @@ static inline void bchg_reg_change_bit(int nr, volatile unsigned long *vaddr)
 		: "memory");
 }
 
-static inline void bchg_mem_change_bit(int nr, volatile unsigned long *vaddr)
+static __always_inline void bchg_mem_change_bit(int nr, volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
 
@@ -133,7 +133,7 @@ static inline void bchg_mem_change_bit(int nr, volatile unsigned long *vaddr)
 		: "di" (nr & 7));
 }
 
-static inline void bfchg_mem_change_bit(int nr, volatile unsigned long *vaddr)
+static __always_inline void bfchg_mem_change_bit(int nr, volatile unsigned long *vaddr)
 {
 	__asm__ __volatile__ ("bfchg %1{%0:#1}"
 		:
@@ -160,7 +160,7 @@ arch___change_bit(unsigned long nr, volatile unsigned long *addr)
 #define arch_test_bit generic_test_bit
 #define arch_test_bit_acquire generic_test_bit_acquire
 
-static inline int bset_reg_test_and_set_bit(int nr,
+static __always_inline int bset_reg_test_and_set_bit(int nr,
 					    volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
@@ -173,7 +173,7 @@ static inline int bset_reg_test_and_set_bit(int nr,
 	return retval;
 }
 
-static inline int bset_mem_test_and_set_bit(int nr,
+static __always_inline int bset_mem_test_and_set_bit(int nr,
 					    volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
@@ -185,7 +185,7 @@ static inline int bset_mem_test_and_set_bit(int nr,
 	return retval;
 }
 
-static inline int bfset_mem_test_and_set_bit(int nr,
+static __always_inline int bfset_mem_test_and_set_bit(int nr,
 					     volatile unsigned long *vaddr)
 {
 	char retval;
@@ -213,7 +213,7 @@ arch___test_and_set_bit(unsigned long nr, volatile unsigned long *addr)
 	return test_and_set_bit(nr, addr);
 }
 
-static inline int bclr_reg_test_and_clear_bit(int nr,
+static __always_inline int bclr_reg_test_and_clear_bit(int nr,
 					      volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
@@ -226,7 +226,7 @@ static inline int bclr_reg_test_and_clear_bit(int nr,
 	return retval;
 }
 
-static inline int bclr_mem_test_and_clear_bit(int nr,
+static __always_inline int bclr_mem_test_and_clear_bit(int nr,
 					      volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
@@ -238,7 +238,7 @@ static inline int bclr_mem_test_and_clear_bit(int nr,
 	return retval;
 }
 
-static inline int bfclr_mem_test_and_clear_bit(int nr,
+static __always_inline int bfclr_mem_test_and_clear_bit(int nr,
 					       volatile unsigned long *vaddr)
 {
 	char retval;
@@ -266,7 +266,7 @@ arch___test_and_clear_bit(unsigned long nr, volatile unsigned long *addr)
 	return test_and_clear_bit(nr, addr);
 }
 
-static inline int bchg_reg_test_and_change_bit(int nr,
+static __always_inline int bchg_reg_test_and_change_bit(int nr,
 					       volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
@@ -279,7 +279,7 @@ static inline int bchg_reg_test_and_change_bit(int nr,
 	return retval;
 }
 
-static inline int bchg_mem_test_and_change_bit(int nr,
+static __always_inline int bchg_mem_test_and_change_bit(int nr,
 					       volatile unsigned long *vaddr)
 {
 	char *p = (char *)vaddr + (nr ^ 31) / 8;
@@ -291,7 +291,7 @@ static inline int bchg_mem_test_and_change_bit(int nr,
 	return retval;
 }
 
-static inline int bfchg_mem_test_and_change_bit(int nr,
+static __always_inline int bfchg_mem_test_and_change_bit(int nr,
 						volatile unsigned long *vaddr)
 {
 	char retval;
@@ -319,7 +319,7 @@ arch___test_and_change_bit(unsigned long nr, volatile unsigned long *addr)
 	return test_and_change_bit(nr, addr);
 }
 
-static inline bool xor_unlock_is_negative_byte(unsigned long mask,
+static __always_inline bool xor_unlock_is_negative_byte(unsigned long mask,
 		volatile unsigned long *p)
 {
 #ifdef CONFIG_COLDFIRE
@@ -350,7 +350,7 @@ static inline bool xor_unlock_is_negative_byte(unsigned long mask,
 #include <asm-generic/bitops/ffz.h>
 #else
 
-static inline int find_first_zero_bit(const unsigned long *vaddr,
+static __always_inline int find_first_zero_bit(const unsigned long *vaddr,
 				      unsigned size)
 {
 	const unsigned long *p = vaddr;
@@ -376,7 +376,7 @@ out:
 }
 #define find_first_zero_bit find_first_zero_bit
 
-static inline int find_next_zero_bit(const unsigned long *vaddr, int size,
+static __always_inline int find_next_zero_bit(const unsigned long *vaddr, int size,
 				     int offset)
 {
 	const unsigned long *p = vaddr + (offset >> 5);
@@ -406,7 +406,7 @@ static inline int find_next_zero_bit(const unsigned long *vaddr, int size,
 }
 #define find_next_zero_bit find_next_zero_bit
 
-static inline int find_first_bit(const unsigned long *vaddr, unsigned size)
+static __always_inline int find_first_bit(const unsigned long *vaddr, unsigned size)
 {
 	const unsigned long *p = vaddr;
 	int res = 32;
@@ -431,7 +431,7 @@ out:
 }
 #define find_first_bit find_first_bit
 
-static inline int find_next_bit(const unsigned long *vaddr, int size,
+static __always_inline int find_next_bit(const unsigned long *vaddr, int size,
 				int offset)
 {
 	const unsigned long *p = vaddr + (offset >> 5);
@@ -465,7 +465,7 @@ static inline int find_next_bit(const unsigned long *vaddr, int size,
  * ffz = Find First Zero in word. Undefined if no zero exists,
  * so code should check against ~0UL first..
  */
-static inline unsigned long ffz(unsigned long word)
+static __always_inline unsigned long ffz(unsigned long word)
 {
 	int res;
 
@@ -488,7 +488,7 @@ static inline unsigned long ffz(unsigned long word)
  */
 #if (defined(__mcfisaaplus__) || defined(__mcfisac__)) && \
 	!defined(CONFIG_M68000)
-static inline unsigned long __ffs(unsigned long x)
+static __always_inline unsigned long __ffs(unsigned long x)
 {
 	__asm__ __volatile__ ("bitrev %0; ff1 %0"
 		: "=d" (x)
@@ -496,7 +496,7 @@ static inline unsigned long __ffs(unsigned long x)
 	return x;
 }
 
-static inline int ffs(int x)
+static __always_inline int ffs(int x)
 {
 	if (!x)
 		return 0;
@@ -518,7 +518,7 @@ static inline int ffs(int x)
  *	the libc and compiler builtin ffs routines, therefore
  *	differs in spirit from the above ffz (man ffs).
  */
-static inline int ffs(int x)
+static __always_inline int ffs(int x)
 {
 	int cnt;
 
@@ -528,7 +528,7 @@ static inline int ffs(int x)
 	return 32 - cnt;
 }
 
-static inline unsigned long __ffs(unsigned long x)
+static __always_inline unsigned long __ffs(unsigned long x)
 {
 	return ffs(x) - 1;
 }
@@ -536,7 +536,7 @@ static inline unsigned long __ffs(unsigned long x)
 /*
  *	fls: find last bit set.
  */
-static inline int fls(unsigned int x)
+static __always_inline int fls(unsigned int x)
 {
 	int cnt;
 
@@ -546,7 +546,7 @@ static inline int fls(unsigned int x)
 	return 32 - cnt;
 }
 
-static inline unsigned long __fls(unsigned long x)
+static __always_inline unsigned long __fls(unsigned long x)
 {
 	return fls(x) - 1;
 }
