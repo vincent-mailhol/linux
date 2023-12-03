@@ -469,6 +469,9 @@ static __always_inline unsigned long ffz(unsigned long word)
 {
 	int res;
 
+	if (__builtin_constant_p(word))
+		return __builtin_ctzl(~word);
+
 	__asm__ __volatile__ ("bfffo %1{#0,#0},%0"
 			      : "=d" (res) : "d" (~word & -~word));
 	return res ^ 31;
@@ -490,6 +493,9 @@ static __always_inline unsigned long ffz(unsigned long word)
 	!defined(CONFIG_M68000)
 static __always_inline unsigned long __ffs(unsigned long x)
 {
+	if (__builtin_constant_p(x))
+		return __builtin_ctzl(x);
+
 	__asm__ __volatile__ ("bitrev %0; ff1 %0"
 		: "=d" (x)
 		: "0" (x));
@@ -522,6 +528,9 @@ static __always_inline int ffs(int x)
 {
 	int cnt;
 
+	if (__builtin_constant_p(x))
+		return __builtin_ffs(x);
+
 	__asm__ ("bfffo %1{#0:#0},%0"
 		: "=d" (cnt)
 		: "dm" (x & -x));
@@ -539,6 +548,9 @@ static __always_inline unsigned long __ffs(unsigned long x)
 static __always_inline int fls(unsigned int x)
 {
 	int cnt;
+
+	if (__builtin_constant_p(x))
+		return x ? 32 - __builtin_clz(x) : 0;
 
 	__asm__ ("bfffo %1{#0,#0},%0"
 		: "=d" (cnt)
