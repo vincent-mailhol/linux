@@ -204,6 +204,9 @@ static __always_inline long ffz(int x)
 {
 	int r;
 
+	if (__builtin_constant_p(x))
+		return __builtin_ctzl(~x);
+
 	asm("%0 = ct1(%1);\n"
 		: "=&r" (r)
 		: "r" (x));
@@ -220,6 +223,9 @@ static __always_inline long ffz(int x)
 static __always_inline int fls(unsigned int x)
 {
 	int r;
+
+	if (__builtin_constant_p(x))
+		return x ? BITS_PER_TYPE(x) - __builtin_clz(x) : 0;
 
 	asm("{ %0 = cl0(%1);}\n"
 		"%0 = sub(#32,%0);\n"
@@ -241,6 +247,9 @@ static __always_inline int fls(unsigned int x)
 static __always_inline int ffs(int x)
 {
 	int r;
+
+	if (__builtin_constant_p(x))
+		return __builtin_ffs(x);
 
 	asm("{ P0 = cmp.eq(%1,#0); %0 = ct0(%1);}\n"
 		"{ if (P0) %0 = #0; if (!P0) %0 = add(%0,#1);}\n"
@@ -264,6 +273,9 @@ static __always_inline unsigned long __ffs(unsigned long word)
 {
 	int num;
 
+	if (__builtin_constant_p(word))
+		return __builtin_ctzl(word);
+
 	asm("%0 = ct0(%1);\n"
 		: "=&r" (num)
 		: "r" (word));
@@ -281,6 +293,9 @@ static __always_inline unsigned long __ffs(unsigned long word)
 static __always_inline unsigned long __fls(unsigned long word)
 {
 	int num;
+
+	if (__builtin_constant_p(word))
+		return BITS_PER_LONG - 1 - __builtin_clzl(word);
 
 	asm("%0 = cl0(%1);\n"
 		"%0 = sub(#31,%0);\n"
