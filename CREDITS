@@ -3954,6 +3954,10 @@ S: 44 Campbell Park Crescent
 S: Edinburgh EH13 0HT
 S: United Kingdom
 
+N: Martin Uecker
+E: uecker@tugraz.at
+D: Author of the __is_constexpr() hack
+
 N: Thomas Uhl
 E: uhl@sun1.rz.fh-heilbronn.de
 D: Application programmer
