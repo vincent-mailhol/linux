@@ -4,6 +4,7 @@
 
 #include <asm/types.h>
 #include <linux/bits.h>
+#include <linux/build_bug.h>
 #include <linux/typecheck.h>
 
 #include <uapi/linux/kernel.h>
