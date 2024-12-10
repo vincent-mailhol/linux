@@ -6,42 +6,67 @@
 #include <kunit/test.h>
 #include <linux/bits.h>
 
-
 static void genmask_test(struct kunit *test)
 {
-	KUNIT_EXPECT_EQ(test, 1ul, GENMASK(0, 0));
-	KUNIT_EXPECT_EQ(test, 3ul, GENMASK(1, 0));
-	KUNIT_EXPECT_EQ(test, 6ul, GENMASK(2, 1));
-	KUNIT_EXPECT_EQ(test, 0xFFFFFFFFul, GENMASK(31, 0));
-
 #ifdef TEST_GENMASK_FAILURES
+	int x = 0ULL, y = 9ULL, z = 10ULL;
+
 	/* these should fail compilation */
 	GENMASK(0, 1);
 	GENMASK(0, 10);
 	GENMASK(9, 10);
+
+	GENMASK(x, 1);
+	GENMASK(0, y);
+	GENMASK(x, y);
+	GENMASK(y, z);
 #endif
 
-
+	KUNIT_EXPECT_EQ(test, 1ul, GENMASK(0, 0));
+	KUNIT_EXPECT_EQ(test, 3ul, GENMASK(1, 0));
+	KUNIT_EXPECT_EQ(test, 6ul, GENMASK(2, 1));
+	KUNIT_EXPECT_EQ(test, 0xFFFFFFFFul, GENMASK(31, 0));
 }
 
 static void genmask_ull_test(struct kunit *test)
 {
-	KUNIT_EXPECT_EQ(test, 1ull, GENMASK_ULL(0, 0));
-	KUNIT_EXPECT_EQ(test, 3ull, GENMASK_ULL(1, 0));
-	KUNIT_EXPECT_EQ(test, 0x000000ffffe00000ull, GENMASK_ULL(39, 21));
-	KUNIT_EXPECT_EQ(test, 0xffffffffffffffffull, GENMASK_ULL(63, 0));
-
 #ifdef TEST_GENMASK_FAILURES
+	unsigned long long x = 0ULL, y = 9ULL, z = 10ULL;
+
 	/* these should fail compilation */
 	GENMASK_ULL(0, 1);
 	GENMASK_ULL(0, 10);
 	GENMASK_ULL(9, 10);
+
+	GENMASK_ULL(x, 1);
+	GENMASK_ULL(0, y);
+	GENMASK_ULL(x, y);
+	GENMASK_ULL(y, z);
 #endif
+
+	KUNIT_EXPECT_EQ(test, 1ull, GENMASK_ULL(0, 0));
+	KUNIT_EXPECT_EQ(test, 3ull, GENMASK_ULL(1, 0));
+	KUNIT_EXPECT_EQ(test, 0x000000ffffe00000ull, GENMASK_ULL(39, 21));
+	KUNIT_EXPECT_EQ(test, 0xffffffffffffffffull, GENMASK_ULL(63, 0));
 }
 
 static void genmask_u128_test(struct kunit *test)
 {
 #ifdef CONFIG_ARCH_SUPPORTS_INT128
+#ifdef TEST_GENMASK_FAILURES
+	u128 x = 0ULL, y = 9ULL, z = 10ULL;
+
+	/* these should fail compilation */
+	GENMASK_U128(0, 1);
+	GENMASK_U128(0, 10);
+	GENMASK_U128(9, 10);
+
+	GENMASK_U128(x, 1);
+	GENMASK_U128(0, y);
+	GENMASK_U128(x, y);
+	GENMASK_U128(y, z);
+#endif /* TEST_GENMASK_FAILURES */
+
 	/* Below 64 bit masks */
 	KUNIT_EXPECT_EQ(test, 0x0000000000000001ull, GENMASK_U128(0, 0));
 	KUNIT_EXPECT_EQ(test, 0x0000000000000003ull, GENMASK_U128(1, 0));
@@ -60,30 +85,26 @@ static void genmask_u128_test(struct kunit *test)
 	KUNIT_EXPECT_EQ(test, 0xffffffffffffffffull, (u64)GENMASK_U128(127, 0));
 	KUNIT_EXPECT_EQ(test, 0x0000000000000003ull, GENMASK_U128(127, 126) >> 126);
 	KUNIT_EXPECT_EQ(test, 0x0000000000000001ull, GENMASK_U128(127, 127) >> 127);
-#ifdef TEST_GENMASK_FAILURES
-	/* these should fail compilation */
-	GENMASK_U128(0, 1);
-	GENMASK_U128(0, 10);
-	GENMASK_U128(9, 10);
-#endif /* TEST_GENMASK_FAILURES */
 #endif /* CONFIG_ARCH_SUPPORTS_INT128 */
 }
 
 static void genmask_input_check_test(struct kunit *test)
 {
-	unsigned int x, y;
-	int z, w;
+	unsigned int x = 0, y = 42;
+	int w = 5, z = 31;
 
-	/* Unknown input */
+	/* Non-constant input */
 	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(x, 0));
 	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(0, x));
-	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(x, y));
+	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(y, 0));
+	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(y, x));
 
+	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(w, 0));
 	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(z, 0));
-	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(0, z));
 	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(z, w));
+	__diag_pop();
 
-	/* Valid input */
+	/* Integer constant expressions */
 	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(1, 1));
 	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(39, 21));
 	KUNIT_EXPECT_EQ(test, 0, GENMASK_INPUT_CHECK(100, 80));
