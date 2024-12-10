@@ -90,8 +90,8 @@ struct ip_tunnel_encap {
 
 /* Maximum tunnel options length. */
 #define IP_TUNNEL_OPTS_MAX					\
-	GENMASK((sizeof_field(struct ip_tunnel_info,		\
-			      options_len) * BITS_PER_BYTE) - 1, 0)
+	__GENMASK((sizeof_field(struct ip_tunnel_info,		\
+				options_len) * BITS_PER_BYTE) - 1, 0)
 
 #define ip_tunnel_info_opts(info)				\
 	_Generic(info,						\

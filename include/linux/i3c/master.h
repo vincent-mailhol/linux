@@ -56,7 +56,7 @@ struct i3c_i2c_dev_desc {
 #define I3C_LVR_I2C_INDEX(x)		((x) << 5)
 #define I3C_LVR_I2C_FM_MODE		BIT(4)
 
-#define I2C_MAX_ADDR			GENMASK(6, 0)
+#define I2C_MAX_ADDR			__GENMASK(6, 0)
 
 /**
  * struct i2c_dev_boardinfo - I2C device board information

@@ -31,7 +31,7 @@
 #include "t7xx_hif_cldma.h"
 #include "t7xx_pci.h"
 
-#define PORT_CH_ID_MASK		GENMASK(7, 0)
+#define PORT_CH_ID_MASK		__GENMASK(7, 0)
 
 /* Channel ID and Message ID definitions.
  * The channel number consists of peer_id(15:12) , channel_id(11:0)

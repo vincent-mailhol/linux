@@ -28,7 +28,7 @@
 #define TS_NUM_SFT	0
 #define PD_NUM_MSK	GENMASK(12, 8)
 #define PD_NUM_SFT	8
-#define VM_NUM_MSK	GENMASK(20, 16)
+#define VM_NUM_MSK	__GENMASK(20, 16)
 #define VM_NUM_SFT	16
 #define CH_NUM_MSK	GENMASK(31, 24)
 #define CH_NUM_SFT	24

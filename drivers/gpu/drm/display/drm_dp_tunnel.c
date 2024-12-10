@@ -87,7 +87,7 @@
 #define DP_TUNNELING_BASE DP_TUNNELING_OUI
 
 #define __DPTUN_REG_RANGE(__start, __size) \
-	GENMASK_ULL((__start) + (__size) - 1, (__start))
+	__GENMASK_ULL((__start) + (__size) - 1, (__start))
 
 #define DPTUN_REG_RANGE(__addr, __size) \
 	__DPTUN_REG_RANGE((__addr) - DP_TUNNELING_BASE, (__size))
