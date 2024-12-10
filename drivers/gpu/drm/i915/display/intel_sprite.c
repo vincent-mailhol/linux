@@ -143,7 +143,8 @@ vlv_sprite_update_clrc(const struct intel_plane_state *plane_state)
 	const struct drm_framebuffer *fb = plane_state->hw.fb;
 	enum pipe pipe = plane->pipe;
 	enum plane_id plane_id = plane->id;
-	int contrast, brightness, sh_scale, sh_sin, sh_cos;
+	int contrast, sh_scale, sh_sin, sh_cos;
+	u8 brightness;
 
 	if (fb->format->is_yuv &&
 	    plane_state->hw.color_range == DRM_COLOR_YCBCR_LIMITED_RANGE) {
