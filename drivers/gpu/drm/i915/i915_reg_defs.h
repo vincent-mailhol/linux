@@ -8,77 +8,123 @@
 
 #include <linux/bitfield.h>
 #include <linux/bits.h>
+#include <linux/build_bug.h>
+#include <linux/compiler.h>
+#include <linux/overflow.h>
+
+/**
+ * reg_bit_t() - Prepare a bit value of a given type
+ * @type: the desired type
+ * @n: 0-based bit number
+ *
+ * Local wrapper for BIT() to force @type, with compile time checks.
+ *
+ * @return: Value with bit @n set.
+ */
+#define reg_bit_t(type, n)						\
+	(BUILD_BUG_ON_ZERO(						\
+		statically_true((n) < 0 ||				\
+				(n) >= BITS_PER_TYPE(type))) +		\
+	 (type)BIT(n))
 
 /**
  * REG_BIT() - Prepare a u32 bit value
- * @__n: 0-based bit number
+ * @n: 0-based bit number
  *
  * Local wrapper for BIT() to force u32, with compile time checks.
  *
- * @return: Value with bit @__n set.
+ * @return: Value with bit @n set.
  */
-#define REG_BIT(__n)							\
-	((u32)(BIT(__n) +						\
-	       BUILD_BUG_ON_ZERO(__is_constexpr(__n) &&		\
-				 ((__n) < 0 || (__n) > 31))))
+#define REG_BIT(n) reg_bit_t(u32, n)
+
+/**
+ * REG_BIT16() - Prepare a u16 bit value
+ * @n: 0-based bit number
+ *
+ * Local wrapper for BIT() to force u16, with compile time
+ * checks.
+ *
+ * @return: Value with bit @n set.
+ */
+#define REG_BIT16(n) reg_bit_t(u16, n)
 
 /**
  * REG_BIT8() - Prepare a u8 bit value
- * @__n: 0-based bit number
+ * @n: 0-based bit number
  *
  * Local wrapper for BIT() to force u8, with compile time checks.
  *
- * @return: Value with bit @__n set.
+ * @return: Value with bit @n set.
  */
-#define REG_BIT8(__n)                                                   \
-	((u8)(BIT(__n) +                                                \
-	       BUILD_BUG_ON_ZERO(__is_constexpr(__n) &&         \
-				 ((__n) < 0 || (__n) > 7))))
+#define REG_BIT8(n) reg_bit_t(u8, n)
+
+/**
+ * reg_genmask_input_check_t() - check bitmask arguments
+ * @type: the desired type
+ * @high: 0-based high bit
+ * @low: 0-based low bit
+ *
+ * Additional compile time checks before calling GENMASK() or
+ * GENMASK_ULL().
+ *
+ * @return: 0 if check succeeds, otherwhise, generate a build bug
+ */
+#define reg_genmask_input_check_t(type, high, low)			\
+	BUILD_BUG_ON_ZERO(						\
+		statically_true((low) < 0 || (high) >= BITS_PER_TYPE(type)))
 
 /**
  * REG_GENMASK() - Prepare a continuous u32 bitmask
- * @__high: 0-based high bit
- * @__low: 0-based low bit
+ * @high: 0-based high bit
+ * @low: 0-based low bit
  *
  * Local wrapper for GENMASK() to force u32, with compile time checks.
  *
- * @return: Continuous bitmask from @__high to @__low, inclusive.
+ * @return: Continuous bitmask from @high to @low, inclusive.
  */
-#define REG_GENMASK(__high, __low)					\
-	((u32)(GENMASK(__high, __low) +					\
-	       BUILD_BUG_ON_ZERO(__is_constexpr(__high) &&	\
-				 __is_constexpr(__low) &&		\
-				 ((__low) < 0 || (__high) > 31 || (__low) > (__high)))))
+#define REG_GENMASK(high, low)						\
+	(reg_genmask_input_check_t(u32, high, low) +			\
+	(u32)GENMASK(high, low))
 
 /**
  * REG_GENMASK64() - Prepare a continuous u64 bitmask
- * @__high: 0-based high bit
- * @__low: 0-based low bit
+ * @high: 0-based high bit
+ * @low: 0-based low bit
  *
  * Local wrapper for GENMASK_ULL() to force u64, with compile time checks.
  *
- * @return: Continuous bitmask from @__high to @__low, inclusive.
+ * @return: Continuous bitmask from @high to @low, inclusive.
  */
-#define REG_GENMASK64(__high, __low)					\
-	((u64)(GENMASK_ULL(__high, __low) +				\
-	       BUILD_BUG_ON_ZERO(__is_constexpr(__high) &&		\
-				 __is_constexpr(__low) &&		\
-				 ((__low) < 0 || (__high) > 63 || (__low) > (__high)))))
+#define REG_GENMASK64(high, low)					\
+	(reg_genmask_input_check_t(u64, high, low) +			\
+	(u64)GENMASK_ULL(high, low))
+
+/**
+ * REG_GENMASK16() - Prepare a continuous u8 bitmask
+ * @high: 0-based high bit
+ * @low: 0-based low bit
+ *
+ * Local wrapper for GENMASK() to force u16, with compile time
+ * checks.
+ *
+ * @return: Continuous bitmask from @high to @low, inclusive.
+ */
+#define REG_GENMASK16(high, low)					\
+	(reg_genmask_input_check_t(u16, high, low) +			\
+	(u16)GENMASK(high, low))
 
 /**
  * REG_GENMASK8() - Prepare a continuous u8 bitmask
- * @__high: 0-based high bit
- * @__low: 0-based low bit
+ * @high: 0-based high bit
+ * @low: 0-based low bit
  *
  * Local wrapper for GENMASK() to force u8, with compile time checks.
  *
- * @return: Continuous bitmask from @__high to @__low, inclusive.
+ * @return: Continuous bitmask from @high to @low, inclusive.
  */
-#define REG_GENMASK8(__high, __low)                                     \
-	((u8)(GENMASK(__high, __low) +                                  \
-	       BUILD_BUG_ON_ZERO(__is_constexpr(__high) &&      \
-				 __is_constexpr(__low) &&               \
-				 ((__low) < 0 || (__high) > 7 || (__low) > (__high)))))
+#define REG_GENMASK8(high, low)						\
+	(reg_genmask_input_check_t(u8, high, low) +			\
+	(u8)GENMASK(high, low))
 
 /*
  * Local integer constant expression version of is_power_of_2().
@@ -86,38 +132,60 @@
 #define IS_POWER_OF_2(__x)		((__x) && (((__x) & ((__x) - 1)) == 0))
 
 /**
+ * reg_field_prep_t() - Prepare a u32 bitfield value
+ * @type: the desired type
+ * @mask: shifted mask defining the field's length and position
+ * @val: value to put in the field
+ *
+ * Local copy of FIELD_PREP() to generate an integer constant expression, force
+ * @type and for consistency with REG_FIELD_GET(), REG_BIT() and REG_GENMASK().
+ *
+ * @return: @val masked and shifted into the field defined by @mask.
+ */
+#define reg_field_prep_t(type, mask, val)				\
+	((type)((((typeof(mask))(val) << __bf_shf(mask)) & (mask)) +	\
+		BUILD_BUG_ON_ZERO(!__builtin_constant_p(mask)) +	\
+		BUILD_BUG_ON_ZERO((mask) == 0 || (mask) > type_max(type)) + \
+		BUILD_BUG_ON_ZERO(!IS_POWER_OF_2((mask) + (1ULL << __bf_shf(mask)))) + \
+		BUILD_BUG_ON_ZERO(statically_true(~((mask) >> __bf_shf(mask)) & (val)))))
+
+
+/**
  * REG_FIELD_PREP() - Prepare a u32 bitfield value
- * @__mask: shifted mask defining the field's length and position
- * @__val: value to put in the field
+ * @mask: shifted mask defining the field's length and position
+ * @val: value to put in the field
  *
  * Local copy of FIELD_PREP() to generate an integer constant expression, force
  * u32 and for consistency with REG_FIELD_GET(), REG_BIT() and REG_GENMASK().
  *
- * @return: @__val masked and shifted into the field defined by @__mask.
+ * @return: @val masked and shifted into the field defined by @mask.
  */
-#define REG_FIELD_PREP(__mask, __val)						\
-	((u32)((((typeof(__mask))(__val) << __bf_shf(__mask)) & (__mask)) +	\
-	       BUILD_BUG_ON_ZERO(!__is_constexpr(__mask)) +		\
-	       BUILD_BUG_ON_ZERO((__mask) == 0 || (__mask) > U32_MAX) +		\
-	       BUILD_BUG_ON_ZERO(!IS_POWER_OF_2((__mask) + (1ULL << __bf_shf(__mask)))) + \
-	       BUILD_BUG_ON_ZERO(__builtin_choose_expr(__is_constexpr(__val), (~((__mask) >> __bf_shf(__mask)) & (__val)), 0))))
+#define REG_FIELD_PREP(mask, val) reg_field_prep_t(u32, mask, val)
+
+/**
+ * REG_FIELD_PREP16() - Prepare a u16 bitfield value
+ * @mask: shifted mask defining the field's length and position
+ * @val: value to put in the field
+ *
+ * Local copy of FIELD_PREP16() to generate an integer constant
+ * expression, force u8 and for consistency with
+ * REG_FIELD_GET16(), REG_BIT16() and REG_GENMASK16().
+ *
+ * @return: @val masked and shifted into the field defined by @mask.
+ */
+#define REG_FIELD_PREP16(mask, val) reg_field_prep_t(u16, mask, val)
 
 /**
  * REG_FIELD_PREP8() - Prepare a u8 bitfield value
- * @__mask: shifted mask defining the field's length and position
- * @__val: value to put in the field
+ * @mask: shifted mask defining the field's length and position
+ * @val: value to put in the field
  *
  * Local copy of FIELD_PREP() to generate an integer constant expression, force
  * u8 and for consistency with REG_FIELD_GET8(), REG_BIT8() and REG_GENMASK8().
  *
- * @return: @__val masked and shifted into the field defined by @__mask.
+ * @return: @val masked and shifted into the field defined by @mask.
  */
-#define REG_FIELD_PREP8(__mask, __val)                                          \
-	((u8)((((typeof(__mask))(__val) << __bf_shf(__mask)) & (__mask)) +      \
-	       BUILD_BUG_ON_ZERO(!__is_constexpr(__mask)) +             \
-	       BUILD_BUG_ON_ZERO((__mask) == 0 || (__mask) > U8_MAX) +          \
-	       BUILD_BUG_ON_ZERO(!IS_POWER_OF_2((__mask) + (1ULL << __bf_shf(__mask)))) + \
-	       BUILD_BUG_ON_ZERO(__builtin_choose_expr(__is_constexpr(__val), (~((__mask) >> __bf_shf(__mask)) & (__val)), 0))))
+#define REG_FIELD_PREP8(mask, val) reg_field_prep_t(u8, mask, val)
 
 /**
  * REG_FIELD_GET() - Extract a u32 bitfield value
@@ -142,54 +210,6 @@
  * @return: Masked and shifted value of the field defined by @__mask in @__val.
  */
 #define REG_FIELD_GET64(__mask, __val)	((u64)FIELD_GET(__mask, __val))
-
-/**
- * REG_BIT16() - Prepare a u16 bit value
- * @__n: 0-based bit number
- *
- * Local wrapper for BIT() to force u16, with compile time
- * checks.
- *
- * @return: Value with bit @__n set.
- */
-#define REG_BIT16(__n)                                                   \
-	((u16)(BIT(__n) +                                                \
-	       BUILD_BUG_ON_ZERO(__is_constexpr(__n) &&         \
-				 ((__n) < 0 || (__n) > 15))))
-
-/**
- * REG_GENMASK16() - Prepare a continuous u8 bitmask
- * @__high: 0-based high bit
- * @__low: 0-based low bit
- *
- * Local wrapper for GENMASK() to force u16, with compile time
- * checks.
- *
- * @return: Continuous bitmask from @__high to @__low, inclusive.
- */
-#define REG_GENMASK16(__high, __low)                                     \
-	((u16)(GENMASK(__high, __low) +                                  \
-	       BUILD_BUG_ON_ZERO(__is_constexpr(__high) &&      \
-				 __is_constexpr(__low) &&               \
-				 ((__low) < 0 || (__high) > 15 || (__low) > (__high)))))
-
-/**
- * REG_FIELD_PREP16() - Prepare a u16 bitfield value
- * @__mask: shifted mask defining the field's length and position
- * @__val: value to put in the field
- *
- * Local copy of FIELD_PREP16() to generate an integer constant
- * expression, force u8 and for consistency with
- * REG_FIELD_GET16(), REG_BIT16() and REG_GENMASK16().
- *
- * @return: @__val masked and shifted into the field defined by @__mask.
- */
-#define REG_FIELD_PREP16(__mask, __val)                                          \
-	((u16)((((typeof(__mask))(__val) << __bf_shf(__mask)) & (__mask)) +      \
-	       BUILD_BUG_ON_ZERO(!__is_constexpr(__mask)) +             \
-	       BUILD_BUG_ON_ZERO((__mask) == 0 || (__mask) > U16_MAX) +          \
-	       BUILD_BUG_ON_ZERO(!IS_POWER_OF_2((__mask) + (1ULL << __bf_shf(__mask)))) + \
-	       BUILD_BUG_ON_ZERO(__builtin_choose_expr(__is_constexpr(__val), (~((__mask) >> __bf_shf(__mask)) & (__val)), 0))))
 
 #define __MASKED_FIELD(mask, value) ((mask) << 16 | (value))
 #define _MASKED_FIELD(mask, value) ({					   \
@@ -237,7 +257,7 @@
  *	...
  */
 #define _PICK_EVEN_2RANGES(__index, __c_index, __a, __b, __c, __d)		\
-	(BUILD_BUG_ON_ZERO(!__is_constexpr(__c_index)) +			\
+	(BUILD_BUG_ON_ZERO(!__builtin_constant_p(__c_index)) +			\
 	 ((__index) < (__c_index) ? _PICK_EVEN(__index, __a, __b) :		\
 				   _PICK_EVEN((__index) - (__c_index), __c, __d)))
 
