@@ -120,7 +120,7 @@ static const DECLARE_BITMAP(dptun_info_regs, 64) = {
 };
 
 struct drm_dp_tunnel_regs {
-	u8 buf[HWEIGHT64(DPTUN_INFO_REG_MASK)];
+	u8 buf[__const_hweight64(DPTUN_INFO_REG_MASK)];
 };
 
 struct drm_dp_tunnel_group;

@@ -13,7 +13,12 @@
  * e.g. in a structure initializer (or where-ever else comma expressions
  * aren't permitted).
  */
-#define BUILD_BUG_ON_ZERO(e) ((int)(sizeof(struct { int:(-!!(e)); })))
+#ifdef __ASSEMBLY__
+#define BUILD_BUG_ON_ZERO(e, ...) __BUILD_BUG_ON_ZERO(e, #e " is true")
+#else
+int __bug(void) __compiletime_error("BUILD_BUG_ON_ZERO() assertion failed");
+#define BUILD_BUG_ON_ZERO(e) (e ? __bug() : 0)
+#endif /* __ASSEMBLY__ */
 #endif /* __CHECKER__ */
 
 /* Force a compilation error if a constant expression is not a power of 2 */

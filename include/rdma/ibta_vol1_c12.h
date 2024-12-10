@@ -32,8 +32,8 @@
 	field_struct                                                           \
 	{                                                                      \
 		struct ib_mad_hdr hdr;                                         \
-		u32 _data[(total_len) / 32 +                                   \
-			  BUILD_BUG_ON_ZERO((total_len) % 32 != 0)];           \
+		u32 _data[(total_len) / 32];                                   \
+		static_assert((total_len) % 32 == 0);                          \
 	}
 
 /* Table 106 REQ Message Contents */

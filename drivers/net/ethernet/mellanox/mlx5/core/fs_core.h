@@ -223,13 +223,12 @@ struct mlx5_ft_underlay_qp {
 /* Calculate the fte_match_param length and without the reserved length.
  * Make sure the reserved field is the last.
  */
-#define MLX5_ST_SZ_DW_MATCH_PARAM					    \
-	((MLX5_BYTE_OFF(fte_match_param, MLX5_FTE_MATCH_PARAM_RESERVED) / sizeof(u32)) + \
-	 BUILD_BUG_ON_ZERO(MLX5_ST_SZ_BYTES(fte_match_param) !=		     \
-			   MLX5_FLD_SZ_BYTES(fte_match_param,		     \
-					     MLX5_FTE_MATCH_PARAM_RESERVED) +\
-			   MLX5_BYTE_OFF(fte_match_param,		     \
-					 MLX5_FTE_MATCH_PARAM_RESERVED)))
+#define MLX5_ST_SZ_DW_MATCH_PARAM \
+	(MLX5_BYTE_OFF(fte_match_param, MLX5_FTE_MATCH_PARAM_RESERVED) / sizeof(u32))
+
+static_assert(MLX5_ST_SZ_BYTES(fte_match_param) ==
+	      MLX5_FLD_SZ_BYTES(fte_match_param,MLX5_FTE_MATCH_PARAM_RESERVED) +
+	      MLX5_BYTE_OFF(fte_match_param, MLX5_FTE_MATCH_PARAM_RESERVED));
 
 struct fs_fte_action {
 	int				modify_mask;
