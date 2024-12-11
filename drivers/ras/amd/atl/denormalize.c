@@ -638,7 +638,7 @@ static int denorm_addr_df3_6chan(struct addr_ctx *ctx)
 		coh_st_id &= BIT(0);
 		coh_st_id |= GENMASK(2, 1);
 	} else {
-		temp_addr_b = GENMASK_ULL(63, intlv_bit) & ctx->ret_addr;
+		temp_addr_b = __GENMASK_ULL(63, intlv_bit) & ctx->ret_addr;
 		temp_addr_b >>= intlv_bit;
 	}
 
@@ -709,7 +709,7 @@ static int denorm_addr_df4_np2(struct addr_ctx *ctx)
 
 	/* Get the appropriate high bits. */
 	shift_value += 1 - ilog2(ctx->map.num_intlv_sockets);
-	temp_addr_b = GENMASK_ULL(63, shift_value) & ctx->ret_addr;
+	temp_addr_b = __GENMASK_ULL(63, shift_value) & ctx->ret_addr;
 	temp_addr_b >>= shift_value;
 	temp_addr_b *= mod_value;
 

@@ -82,7 +82,7 @@ static void lock_region(struct panfrost_device *pfdev, u32 as_nr,
 	 * Mask off the low bits of region_start (which would be ignored by
 	 * the hardware anyway)
 	 */
-	region_start &= GENMASK_ULL(63, region_width);
+	region_start &= __GENMASK_ULL(63, region_width);
 
 	region = region_width | region_start;
 
