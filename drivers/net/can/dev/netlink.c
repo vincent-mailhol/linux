@@ -55,15 +55,24 @@ static int can_validate_tdc(struct nlattr *data_tdc,
 {
 	int err;
 
-	/* CAN_CTRLMODE_TDC_{AUTO,MANUAL} are mutually exclusive */
-	if (tdc_auto && tdc_manual)
+	if (tdc_auto && tdc_manual) {
+		NL_SET_ERR_MSG_FMT(extack,
+				   "TDC manual and auto modes are mutually exclusive");
 		return -EOPNOTSUPP;
+	}
 
 	/* If one of the CAN_CTRLMODE_TDC_* flag is set then
 	 * TDC must be set and vice-versa
 	 */
-	if ((tdc_auto || tdc_manual) != !!data_tdc)
+	if ((tdc_auto || tdc_manual) && !data_tdc) {
+		NL_SET_ERR_MSG_FMT(extack, "TDC parameters are missing");
 		return -EOPNOTSUPP;
+	}
+	if (!(tdc_auto || tdc_manual) && data_tdc) {
+		NL_SET_ERR_MSG_FMT(extack,
+				   "TDC mode (auto or manual) is missing");
+		return -EOPNOTSUPP;
+	}
 
 	/* If providing TDC parameters, at least TDCO is needed. TDCV
 	 * is needed if and only if CAN_CTRLMODE_TDC_MANUAL is set
@@ -77,15 +86,24 @@ static int can_validate_tdc(struct nlattr *data_tdc,
 			return err;
 
 		if (tb_tdc[IFLA_CAN_TDC_TDCV]) {
-			if (tdc_auto)
+			if (tdc_auto) {
+				NL_SET_ERR_MSG_FMT(extack,
+						   "TDCV argument is incompatible with TDC auto mode");
 				return -EOPNOTSUPP;
+			}
 		} else {
-			if (tdc_manual)
+			if (tdc_manual) {
+				NL_SET_ERR_MSG_FMT(extack,
+						   "TDC manual mode requires the TDCV argument");
 				return -EOPNOTSUPP;
+			}
 		}
 
-		if (!tb_tdc[IFLA_CAN_TDC_TDCO])
+		if (!tb_tdc[IFLA_CAN_TDC_TDCO]) {
+			NL_SET_ERR_MSG_FMT(extack,
+					   "TDCO option is missing");
 			return -EOPNOTSUPP;
+		}
 	}
 
 	return 0;
@@ -130,13 +148,19 @@ static int can_validate(struct nlattr *tb[], struct nlattr *data[],
 	}
 
 	if (is_can_fd) {
-		if (!data[IFLA_CAN_BITTIMING] || !data[IFLA_CAN_DATA_BITTIMING])
+		if (!data[IFLA_CAN_BITTIMING] || !data[IFLA_CAN_DATA_BITTIMING]) {
+			NL_SET_ERR_MSG_FMT(extack,
+					   "Provide both nominal and FD data bittiming");
 			return -EOPNOTSUPP;
+		}
 	}
 
 	if (data[IFLA_CAN_DATA_BITTIMING] || data[IFLA_CAN_TDC]) {
-		if (!is_can_fd)
+		if (!is_can_fd) {
+			NL_SET_ERR_MSG_FMT(extack,
+					   "CAN FD is required to use FD data bittiming or FD TDC");
 			return -EOPNOTSUPP;
+		}
 	}
 
 	if (data[IFLA_CAN_DATA_BITTIMING]) {
