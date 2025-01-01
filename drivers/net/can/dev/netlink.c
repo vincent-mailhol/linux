@@ -22,6 +22,9 @@ static const struct nla_policy can_policy[IFLA_CAN_MAX + 1] = {
 	[IFLA_CAN_TERMINATION] = { .type = NLA_U16 },
 	[IFLA_CAN_TDC] = { .type = NLA_NESTED },
 	[IFLA_CAN_CTRLMODE_EXT] = { .type = NLA_NESTED },
+	[IFLA_CAN_XL_DATA_BITTIMING] = { .len = sizeof(struct can_bittiming) },
+	[IFLA_CAN_XL_DATA_BITTIMING_CONST] = { .len = sizeof(struct can_bittiming_const) },
+	[IFLA_CAN_XL_TDC] = { .type = NLA_NESTED },
 };
 
 static const struct nla_policy can_tdc_policy[IFLA_CAN_TDC_MAX + 1] = {
@@ -112,7 +115,7 @@ static int can_validate_tdc(struct nlattr *data_tdc,
 static int can_validate(struct nlattr *tb[], struct nlattr *data[],
 			struct netlink_ext_ack *extack)
 {
-	bool is_can_fd = false;
+	bool is_can_fd = false, is_can_xl = false;
 	int err;
 
 	/* Make sure that valid CAN FD configurations always consist of
@@ -129,6 +132,7 @@ static int can_validate(struct nlattr *tb[], struct nlattr *data[],
 		struct can_ctrlmode *cm = nla_data(data[IFLA_CAN_CTRLMODE]);
 
 		is_can_fd = cm->flags & cm->mask & CAN_CTRLMODE_FD;
+		is_can_xl = cm->flags & cm->mask & CAN_CTRLMODE_XL;
 
 		err = can_validate_tdc(data[IFLA_CAN_TDC],
 				       cm->flags & CAN_CTRLMODE_TDC_AUTO,
@@ -154,6 +158,13 @@ static int can_validate(struct nlattr *tb[], struct nlattr *data[],
 			return -EOPNOTSUPP;
 		}
 	}
+	if (is_can_xl) {
+		if (!data[IFLA_CAN_BITTIMING] || !data[IFLA_CAN_XL_DATA_BITTIMING]) {
+			NL_SET_ERR_MSG_FMT(extack,
+					   "Provide both nominal and XL data bittiming");
+			return -EOPNOTSUPP;
+		}
+	}
 
 	if (data[IFLA_CAN_DATA_BITTIMING] || data[IFLA_CAN_TDC]) {
 		if (!is_can_fd) {
@@ -162,11 +173,26 @@ static int can_validate(struct nlattr *tb[], struct nlattr *data[],
 			return -EOPNOTSUPP;
 		}
 	}
+	if (data[IFLA_CAN_XL_DATA_BITTIMING] || data[IFLA_CAN_XL_TDC]) {
+		if (!is_can_xl) {
+			NL_SET_ERR_MSG_FMT(extack,
+					   "CAN XL is required to use XL data bittiming or XL TDC");
+			return -EOPNOTSUPP;
+		}
+	}
 
 	if (data[IFLA_CAN_DATA_BITTIMING]) {
 		struct can_bittiming bt;
 
 		memcpy(&bt, nla_data(data[IFLA_CAN_DATA_BITTIMING]), sizeof(bt));
+		err = can_validate_bittiming(&bt, extack);
+		if (err)
+			return err;
+	}
+	if (data[IFLA_CAN_XL_DATA_BITTIMING]) {
+		struct can_bittiming bt;
+
+		memcpy(&bt, nla_data(data[IFLA_CAN_XL_DATA_BITTIMING]), sizeof(bt));
 		err = can_validate_bittiming(&bt, extack);
 		if (err)
 			return err;
@@ -299,8 +325,8 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 			  struct nlattr *data[],
 			  struct netlink_ext_ack *extack)
 {
+	bool fd_tdc_flag_provided = false, xl_tdc_flag_provided = false;
 	struct can_priv *priv = netdev_priv(dev);
-	bool fd_tdc_flag_provided = false;
 	int err;
 
 	/* We need synchronization with dev->stop() */
@@ -334,8 +360,10 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 		priv->ctrlmode &= ~cm->mask;
 		priv->ctrlmode |= maskedflags;
 
-		/* CAN_CTRLMODE_FD can only be set when driver supports FD */
-		if (priv->ctrlmode & CAN_CTRLMODE_FD) {
+		/* CAN_CTRLMODE_{FD,XL} can only be set when driver supports FD/XL */
+		if (priv->ctrlmode & CAN_CTRLMODE_XL) {
+			dev->mtu = CANXL_MAX_MTU;
+		} else if (priv->ctrlmode & CAN_CTRLMODE_FD) {
 			dev->mtu = CANFD_MTU;
 		} else {
 			dev->mtu = CAN_MTU;
@@ -346,11 +374,14 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 		}
 
 		fd_tdc_flag_provided = cm->mask & CAN_CTRLMODE_FD_TDC_MASK;
-		/* CAN_CTRLMODE_TDC_{AUTO,MANUAL} are mutually
+		xl_tdc_flag_provided = cm->mask & CAN_CTRLMODE_XL_TDC_MASK;
+		/* CAN_CTRLMODE_(XL_)TDC_{AUTO,MANUAL} are mutually
 		 * exclusive: make sure to turn the other one off
 		 */
 		if (fd_tdc_flag_provided)
 			priv->ctrlmode &= cm->flags | ~CAN_CTRLMODE_FD_TDC_MASK;
+		if (xl_tdc_flag_provided)
+			priv->ctrlmode &= cm->flags | ~CAN_CTRLMODE_XL_TDC_MASK;
 	}
 
 	if (data[IFLA_CAN_BITTIMING]) {
@@ -416,6 +447,15 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 				 data[IFLA_CAN_TDC], fd_tdc_flag_provided,
 				 can_fd_tdc_is_enabled(priv),
 				 CAN_CTRLMODE_FD_TDC_MASK, extack);
+	if (err)
+		return err;
+
+	/* CAN XL */
+	err = can_dbt_changelink(dev,
+				 data[IFLA_CAN_XL_DATA_BITTIMING], &priv->xl,
+				 data[IFLA_CAN_XL_TDC], xl_tdc_flag_provided,
+				 can_xl_tdc_is_enabled(priv),
+				 CAN_CTRLMODE_XL_TDC_MASK, extack);
 	if (err)
 		return err;
 
@@ -518,6 +558,16 @@ static size_t can_get_size(const struct net_device *dev)
 				 can_fd_tdc_is_enabled(priv),
 				 priv->ctrlmode & CAN_CTRLMODE_TDC_MANUAL);
 	size += can_ctrlmode_ext_get_size();			/* IFLA_CAN_CTRLMODE_EXT */
+	if (priv->xl.data_bittiming.bitrate)			/* IFLA_CAN_XL_DATA_BITTIMING */
+		size += nla_total_size(sizeof(struct can_bittiming));
+	if (priv->xl.data_bittiming_const)			/* IFLA_CAN_XL_DATA_BITTIMING_CONST */
+		size += nla_total_size(sizeof(struct can_bittiming_const));
+	if (priv->xl.data_bitrate_const)			/* IFLA_CAN_DATA_BITRATE_CONST */
+		size += nla_total_size(sizeof(*priv->xl.data_bitrate_const) *
+				       priv->xl.data_bitrate_const_cnt);
+	size += can_tdc_get_size(&priv->xl,			/* IFLA_CAN_XL_TDC */
+				 can_xl_tdc_is_enabled(priv),
+				 priv->ctrlmode & CAN_CTRLMODE_XL_TDC_MANUAL);
 
 	return size;
 }
@@ -658,7 +708,25 @@ static int can_fill_info(struct sk_buff *skb, const struct net_device *dev)
 	    can_tdc_fill_info(skb, dev, &priv->fd, can_fd_tdc_is_enabled(priv),
 			      priv->ctrlmode & CAN_CTRLMODE_TDC_MANUAL) ||
 
-	    can_ctrlmode_ext_fill_info(skb, priv)
+	    can_ctrlmode_ext_fill_info(skb, priv) ||
+
+	    (priv->xl.data_bittiming.bitrate &&
+	     nla_put(skb, IFLA_CAN_XL_DATA_BITTIMING,
+		     sizeof(priv->xl.data_bittiming), &priv->xl.data_bittiming)) ||
+
+	    (priv->xl.data_bittiming_const &&
+	     nla_put(skb, IFLA_CAN_XL_DATA_BITTIMING_CONST,
+		     sizeof(*priv->xl.data_bittiming_const),
+		     priv->xl.data_bittiming_const)) ||
+
+	    (priv->xl.data_bitrate_const &&
+	     nla_put(skb, IFLA_CAN_XL_DATA_BITRATE_CONST,
+		     sizeof(*priv->xl.data_bitrate_const) *
+		     priv->xl.data_bitrate_const_cnt,
+		     priv->xl.data_bitrate_const)) ||
+
+	    can_tdc_fill_info(skb, dev, &priv->xl, can_xl_tdc_is_enabled(priv),
+			      priv->ctrlmode & CAN_CTRLMODE_XL_TDC_MANUAL)
 	    )
 
 		return -EMSGSIZE;

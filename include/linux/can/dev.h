@@ -58,7 +58,7 @@ struct can_priv {
 
 	const struct can_bittiming_const *bittiming_const;
 	struct can_bittiming bittiming;
-	struct data_bittiming_params fd;
+	struct data_bittiming_params fd, xl;
 	unsigned int bitrate_const_cnt;
 	const u32 *bitrate_const;
 	u32 bitrate_max;
@@ -96,6 +96,11 @@ static inline bool can_fd_tdc_is_enabled(const struct can_priv *priv)
 	return !!(priv->ctrlmode & CAN_CTRLMODE_FD_TDC_MASK);
 }
 
+static inline bool can_xl_tdc_is_enabled(const struct can_priv *priv)
+{
+	return !!(priv->ctrlmode & CAN_CTRLMODE_XL_TDC_MASK);
+}
+
 /*
  * can_get_relative_tdco() - TDCO relative to the sample point
  *
@@ -116,13 +121,13 @@ static inline bool can_fd_tdc_is_enabled(const struct can_priv *priv)
  *                           |                      |<->| relative TDCO
  *  |<------------- Secondary Sample Point ------------>|
  */
-static inline s32 can_get_relative_tdco(const struct can_priv *priv)
+static inline s32 can_get_relative_tdco(const struct data_bittiming_params *dbt_params)
 {
-	const struct can_bittiming *dbt = &priv->fd.data_bittiming;
+	const struct can_bittiming *dbt = &dbt_params->data_bittiming;
 	s32 sample_point_in_tc = (CAN_SYNC_SEG + dbt->prop_seg +
 				  dbt->phase_seg1) * dbt->brp;
 
-	return (s32)priv->fd.tdc.tdco - sample_point_in_tc;
+	return (s32)dbt_params->tdc.tdco - sample_point_in_tc;
 }
 
 /* helper to define static CAN controller features at device creation time */
