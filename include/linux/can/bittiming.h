@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* Copyright (c) 2020 Pengutronix, Marc Kleine-Budde <kernel@pengutronix.de>
- * Copyright (c) 2021 Vincent Mailhol <mailhol.vincent@wanadoo.fr>
+ * Copyright (c) 2021,2025 Vincent Mailhol <mailhol@kernel.org>
  */
 
 #ifndef _CAN_BITTIMING_H
@@ -115,6 +115,38 @@ struct can_tdc_const {
 	u32 tdcf_min;
 	u32 tdcf_max;
 };
+
+#define CAN_PWMS_MIN 1
+#define CAN_PWML_MIN 1
+#define CAN_PWMO_MIN 1
+
+/*
+ * struct can_pwm - CAN Pulse-Width Modulation (PWM) parameters
+ *
+ * @pwms: pulse width modulation short phase
+ * @pwml: pulse width modulation long phase
+ * @pwmo: pulse width modulation offset
+ */
+struct can_pwm {
+	u32 pwms;
+	u32 pwml;
+};
+
+/*
+ * struct can_pwm - CAN hardware-dependent constants for Pulse-Width
+ *	Modulation (PWM)
+ *
+ * @pwms_max: pulse width modulation short phase maximum value
+ * @pwml_max: pulse width modulation long phase maximum value
+ * @pwmo_max: pulse width modulation offset phase maximum value
+ */
+struct can_pwm_const {
+	u32 pwms_max;
+	u32 pwml_max;
+	u32 pwmo_max;
+};
+
+u32 can_get_pwmo(const struct can_pwm *pwm, const struct can_bittiming *dbt);
 
 #ifdef CONFIG_CAN_CALC_BITTIMING
 int can_calc_bittiming(const struct net_device *dev, struct can_bittiming *bt,

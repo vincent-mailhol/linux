@@ -151,3 +151,25 @@ int can_get_bittiming(const struct net_device *dev, struct can_bittiming *bt,
 
 	return -EINVAL;
 }
+
+static inline unsigned int can_tq_to_tqmin(const struct can_bittiming *bt,
+					   unsigned int tq)
+{
+	return tq * bt->brp;
+}
+
+static inline unsigned int can_bit_time_tqmin(const struct can_bittiming *bt)
+{
+	return can_tq_to_tqmin(bt, can_bit_time(bt));
+}
+
+static unsigned int can_get_pwm(const struct can_pwm *pwm)
+{
+	return pwm->pwms + pwm->pwml;
+}
+
+u32 can_get_pwmo(const struct can_pwm *pwm, const struct can_bittiming *dbt)
+{
+	return can_bit_time_tqmin(dbt) % can_get_pwm(pwm);
+}
+EXPORT_SYMBOL_GPL(can_get_pwmo);

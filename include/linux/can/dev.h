@@ -59,6 +59,8 @@ struct can_priv {
 	const struct can_bittiming_const *bittiming_const;
 	struct can_bittiming bittiming;
 	struct data_bittiming_params fd, xl;
+	const struct can_pwm_const *xl_pwm_const;
+	struct can_pwm xl_pwm;
 	unsigned int bitrate_const_cnt;
 	const u32 *bitrate_const;
 	u32 bitrate_max;
