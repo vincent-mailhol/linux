@@ -25,6 +25,7 @@ static const struct nla_policy can_policy[IFLA_CAN_MAX + 1] = {
 	[IFLA_CAN_XL_DATA_BITTIMING] = { .len = sizeof(struct can_bittiming) },
 	[IFLA_CAN_XL_DATA_BITTIMING_CONST] = { .len = sizeof(struct can_bittiming_const) },
 	[IFLA_CAN_XL_TDC] = { .type = NLA_NESTED },
+	[IFLA_CAN_XL_PWM] = { .type = NLA_NESTED },
 };
 
 static const struct nla_policy can_tdc_policy[IFLA_CAN_TDC_MAX + 1] = {
@@ -37,6 +38,15 @@ static const struct nla_policy can_tdc_policy[IFLA_CAN_TDC_MAX + 1] = {
 	[IFLA_CAN_TDC_TDCV] = { .type = NLA_U32 },
 	[IFLA_CAN_TDC_TDCO] = { .type = NLA_U32 },
 	[IFLA_CAN_TDC_TDCF] = { .type = NLA_U32 },
+};
+
+static const struct nla_policy can_pwm_policy[IFLA_CAN_PWM_MAX + 1] = {
+	[IFLA_CAN_PWM_PWMS_MAX] = { .type = NLA_U32 },
+	[IFLA_CAN_PWM_PWML_MAX] = { .type = NLA_U32 },
+	[IFLA_CAN_PWM_PWMO_MAX] = { .type = NLA_U32 },
+	[IFLA_CAN_PWM_PWMS] = { .type = NLA_U32 },
+	[IFLA_CAN_PWM_PWML] = { .type = NLA_U32 },
+	[IFLA_CAN_PWM_PWMO] = { .type = NLA_U32 },
 };
 
 static int can_validate_bittiming(const struct can_bittiming *bt,
@@ -321,6 +331,40 @@ static int can_dbt_changelink(struct net_device *dev,
 	return 0;
 }
 
+static int can_pwm_changelink(const struct can_pwm_const *pwm_const, struct can_pwm *pwm,
+			      bool pwm_on, const struct nlattr *pwm_nla,
+			      struct netlink_ext_ack *extack)
+{
+	struct nlattr *tb_pwm[IFLA_CAN_PWM_MAX + 1];
+	u32 pwms, pwml;
+	int err;
+
+	if (!pwm_const || !pwm_on)
+		return -EOPNOTSUPP;
+
+	err = nla_parse_nested(tb_pwm, IFLA_CAN_PWM_MAX, pwm_nla,
+			       can_pwm_policy, extack);
+	if (err)
+		return err;
+
+	if (tb_pwm[IFLA_CAN_PWM_PWMS]) {
+		pwms = nla_get_u32(tb_pwm[IFLA_CAN_PWM_PWMS]);
+		if (pwms < CAN_PWMS_MIN || pwms > pwm_const->pwms_max)
+			return -EINVAL;
+	}
+
+	if (tb_pwm[IFLA_CAN_PWM_PWML]) {
+		pwml = nla_get_u32(tb_pwm[IFLA_CAN_PWM_PWML]);
+		if (pwml < CAN_PWML_MIN || pwml > pwm_const->pwml_max)
+			return -EINVAL;
+	}
+
+	pwm->pwms = pwms;
+	pwm->pwml = pwml;
+
+	return 0;
+}
+
 static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 			  struct nlattr *data[],
 			  struct netlink_ext_ack *extack)
@@ -458,6 +502,11 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 				 CAN_CTRLMODE_XL_TDC_MASK, extack);
 	if (err)
 		return err;
+	err = can_pwm_changelink(priv->xl_pwm_const, &priv->xl_pwm,
+				 priv->ctrlmode & CAN_CTRLMODE_XL_PWM,
+				 data[IFLA_CAN_XL_PWM], extack);
+	if (err)
+		return err;
 
 	if (data[IFLA_CAN_TERMINATION]) {
 		const u16 termval = nla_get_u16(data[IFLA_CAN_TERMINATION]);
@@ -523,6 +572,27 @@ static size_t can_ctrlmode_ext_get_size(void)
 		nla_total_size(sizeof(u32));	/* IFLA_CAN_CTRLMODE_SUPPORTED */
 }
 
+static size_t can_pwm_get_size(const struct can_pwm_const *pwm_const,
+			       bool pwm_on)
+{
+	size_t size;
+
+	if (!pwm_const || !pwm_on)
+		return 0;
+
+	size = nla_total_size(0);			/* nest IFLA_CAN_PWM */
+
+	size += nla_total_size(sizeof(u32));		/* IFLA_CANINWM_PWMS_MAX */
+	size += nla_total_size(sizeof(u32));		/* IFLA_CANINWM_PWML_MAX */
+	size += nla_total_size(sizeof(u32));		/* IFLA_CANINWM_PWMO_MAX */
+
+	size += nla_total_size(sizeof(u32));		/* IFLA_CANINWM_PWMS */
+	size += nla_total_size(sizeof(u32));		/* IFLA_CANINWM_PWML */
+	size += nla_total_size(sizeof(u32));		/* IFLA_CANINWM_PWMO */
+
+	return size;
+}
+
 static size_t can_get_size(const struct net_device *dev)
 {
 	struct can_priv *priv = netdev_priv(dev);
@@ -568,6 +638,8 @@ static size_t can_get_size(const struct net_device *dev)
 	size += can_tdc_get_size(&priv->xl,			/* IFLA_CAN_XL_TDC */
 				 can_xl_tdc_is_enabled(priv),
 				 priv->ctrlmode & CAN_CTRLMODE_XL_TDC_MANUAL);
+	size += can_pwm_get_size(priv->xl_pwm_const,		/* IFLA_CAN_XL_PWM */
+				 priv->ctrlmode & CAN_CTRLMODE_XL_PWM);
 
 	return size;
 }
@@ -643,6 +715,43 @@ static int can_ctrlmode_ext_fill_info(struct sk_buff *skb,
 
 	nla_nest_end(skb, nest);
 	return 0;
+}
+
+static int can_pwm_fill_info(struct sk_buff *skb,  const struct net_device *dev,
+			     const struct data_bittiming_params *dbt_params,
+			     const struct can_pwm_const *pwm_const,
+			     const struct can_pwm *pwm,
+			     bool pwm_on)
+{
+	struct nlattr *nest;
+
+	if (!pwm_const)
+		return 0;
+
+	nest = nla_nest_start(skb, IFLA_CAN_XL_PWM);
+	if (!nest)
+		return -EMSGSIZE;
+
+	if (nla_put_u32(skb, IFLA_CAN_PWM_PWMS_MAX, pwm_const->pwms_max) ||
+	    nla_put_u32(skb, IFLA_CAN_PWM_PWML_MAX, pwm_const->pwml_max) ||
+	    nla_put_u32(skb, IFLA_CAN_PWM_PWMO_MAX, pwm_const->pwmo_max))
+		goto err_cancel;
+
+	if (pwm_on) {
+		u32 pwmo = can_get_pwmo(pwm, &dbt_params->data_bittiming);
+
+		if (nla_put_u32(skb, IFLA_CAN_PWM_PWMS, pwm->pwms) ||
+		    nla_put_u32(skb, IFLA_CAN_PWM_PWML, pwm->pwml) ||
+		    nla_put_u32(skb, IFLA_CAN_PWM_PWMO, pwmo))
+			goto err_cancel;
+	}
+
+	nla_nest_end(skb, nest);
+	return 0;
+
+err_cancel:
+	nla_nest_cancel(skb, nest);
+	return -EMSGSIZE;
 }
 
 static int can_fill_info(struct sk_buff *skb, const struct net_device *dev)
@@ -726,7 +835,11 @@ static int can_fill_info(struct sk_buff *skb, const struct net_device *dev)
 		     priv->xl.data_bitrate_const)) ||
 
 	    can_tdc_fill_info(skb, dev, &priv->xl, can_xl_tdc_is_enabled(priv),
-			      priv->ctrlmode & CAN_CTRLMODE_XL_TDC_MANUAL)
+			      priv->ctrlmode & CAN_CTRLMODE_XL_TDC_MANUAL) ||
+
+	    can_pwm_fill_info(skb, dev, &priv->xl,
+			      priv->xl_pwm_const, &priv->xl_pwm,
+			      priv->ctrlmode & CAN_CTRLMODE_XL_PWM)
 	    )
 
 		return -EMSGSIZE;
