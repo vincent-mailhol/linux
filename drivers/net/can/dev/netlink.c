@@ -339,8 +339,13 @@ static int can_pwm_changelink(const struct can_pwm_const *pwm_const, struct can_
 	u32 pwms, pwml;
 	int err;
 
-	if (!pwm_const || !pwm_on)
+	if (!pwm_nla)
+		return 0;
+
+	if (!pwm_const || !pwm_on) {
+		NL_SET_ERR_MSG_FMT(extack, "The device does not support PWM");
 		return -EOPNOTSUPP;
+	}
 
 	err = nla_parse_nested(tb_pwm, IFLA_CAN_PWM_MAX, pwm_nla,
 			       can_pwm_policy, extack);
