@@ -52,24 +52,24 @@
 /*
  * Check whether a signed value is always non-negative.
  *
- * A cast is needed to avoid any warnings from values that aren't signed
- * integer types (in which case the result doesn't matter).
+ * A temporary signed value is needed to avoid any warnings from values that
+ * aren't signed integer types (in which case the result doesn't matter).
  *
  * On 64-bit any integer or pointer type can safely be cast to 'long long'.
  * But on 32-bit we need to avoid warnings about casting pointers to integers
  * of different sizes without truncating 64-bit values so 'long' or 'long long'
  * must be used depending on the size of the value.
- *
- * This does not work for 128-bit signed integers since the cast would truncate
- * them, but we do not use s128 types in the kernel (we do use 'u128',
- * but they are handled by the !is_signed_type() case).
  */
-#if __SIZEOF_POINTER__ == __SIZEOF_LONG_LONG__
-#define __is_nonneg(ux) statically_true((long long)(ux) >= 0)
-#else
-#define __is_nonneg(ux) statically_true( \
-	(typeof(__builtin_choose_expr(sizeof(ux) > 4, 1LL, 1L)))(ux) >= 0)
-#endif
+#define __is_nonneg(ux)							\
+({									\
+	long long __signed_x;						\
+									\
+	BUILD_BUG_ON_MSG(sizeof(ux) > sizeof(long long),                \
+			 "signed 128 bits types not supported");	\
+	__signed_x = __builtin_choose_expr(sizeof(ux) <= sizeof(intptr_t), \
+					   (intptr_t)ux, ux);           \
+	statically_true(__signed_x >= 0);                               \
+})
 
 #define __types_ok(ux, uy) \
 	(__sign_use(ux) & __sign_use(uy))
