@@ -45,18 +45,44 @@ int can_pf_packet_send(int s, __u8 len)
 	return 0;
 }
 
+int can_pf_packet_send_fd(int s, __u8 len)
+{
+	struct canfd_frame frame = {
+		.can_id  = 0x123,
+		.len = len,
+	};
+	int nbytes;
+
+	printf("Send CAN-FD frame of len %u with PF_PACKET\n", len);
+	for (int i = 0; i < CANFD_MAX_DLEN; i++)
+		frame.data[i] = i;
+
+	nbytes = write(s, &frame, sizeof(frame));
+	if (nbytes < 0) {
+		fprintf(stderr, "%s: write: %s\n", __func__, strerror(errno));
+		return 1;
+	}
+	if (nbytes != sizeof(frame)) {
+		fprintf(stderr, "%s: write_len: %s\n",
+			__func__, strerror(errno));
+		return 1;
+	}
+	return 0;
+}
+
 int can_pf_packet_read(int s)
 {
-	struct can_frame frame;
+	struct canfd_frame frame;
 	int nbytes;
 
 	if ((nbytes = read(s, &frame, sizeof(frame))) < 0) {
 		perror("read");
 		return 1;
-	} else if (nbytes < sizeof(frame)) {
-		fprintf(stderr, "read: incomplete CAN frame\n");
-		return 1;
-	} else {
+	}
+
+	switch (nbytes) {
+	case sizeof(struct can_frame):
+	case sizeof(struct canfd_frame):
 		if (frame.can_id & CAN_EFF_FLAG)
 			printf("%8X  ", frame.can_id & CAN_EFF_MASK);
 		else
@@ -70,9 +96,12 @@ int can_pf_packet_read(int s)
 		if (frame.can_id & CAN_RTR_FLAG)
 			printf("remote request");
 		printf("\n");
-		fflush(stdout);
+		return 0;
+
+	default:
+		fprintf(stderr, "read: incomplete CAN frame\n");
+		return 1;
 	}
-	return 0;
 }
 
 int main(int argc, char **argv)
@@ -109,6 +138,9 @@ int main(int argc, char **argv)
 
 	can_pf_packet_send(s, CAN_MAX_DLEN);
 	can_pf_packet_send(s, 255);
+	can_pf_packet_send_fd(s, CANFD_MAX_DLEN);
+	can_pf_packet_send_fd(s, 255);
+
 	can_pf_packet_read(s);
 
 	close(s);
